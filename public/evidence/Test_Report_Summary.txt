@@ -1,0 +1,37 @@
+DigitalWork Solutions - Freelance Escrow & Smart Payment Platform
+Sepolia Smart Contract: 0xA9150693a16Bd2A38eB14b57510D031b2395dAA0
+Etherscan: https://sepolia.etherscan.io/address/0xA9150693a16Bd2A38eB14b57510D031b2395dAA0
+
+Tested Wallet Addresses:
+- Client:     0x329160975fb8Ea2aeAfFBdFB605C780e00aDd15C
+- Freelancer: 0xE0529cB8578Fefa460Bb55e1EB91813B1F2b0120
+- Admin:      0x1444D0c117b02a728255F27d2DF68c87A796D225
+
+Verified Functional Requirements & Evidence Files:
+[01] createContract - สร้างข้อตกลงการจ้างงาน (Create Contract)
+    Evidence: 01_create_contract.png
+    Detail: ผู้ว่าจ้าง (0x3291...d15C) ระบุชื่อโครงการ รายละเอียด ค่าจ้าง 0.25 ETH กำหนดส่ง และ Address ของฟรีแลนซ์ (0xE052...0120)
+
+[02] depositPayment - ฝากเงินค่าจ้างเข้า Escrow (Deposit Payment)
+    Evidence: 02_deposit_payment.png
+    Detail: ผู้ว่าจ้างโอน ETH จำนวน 0.25 ETH ตรงตามข้อตกลงเข้าสู่ Smart Contract Escrow เพื่อใช้เป็นหลักประกัน
+
+[03] submitWork - บันทึกการส่งมอบงาน (Submit Work)
+    Evidence: 03_submit_work.png
+    Detail: ฟรีแลนซ์ (0xE052...0120) ส่งหลักฐาน URL ผลงานเข้าสู่สัญญา สถานะอัปเดตเป็น Submitted
+
+[04] approveAndRelease - อนุมัติและจ่ายเงิน (Approve & Release Payment)
+    Evidence: 04_approve_and_release.png
+    Detail: ผู้ว่าจ้างตรวจรับงานและอนุมัติ ระบบโอน 0.25 ETH ให้ฟรีแลนซ์อัตโนมัติพร้อมล็อกสถานะป้องกันการจ่ายเงินซ้ำ
+
+[05.1] raiseDispute - แจ้งข้อพิพาท (Raise Dispute)
+    Evidence: 05a_raise_dispute.png
+    Detail: คู่สัญญาแจ้งข้อพิพาทบนสัญญา #2 ระบบระงับเงินไว้ใน Escrow ชั่วคราวจนกว่าผู้ดูแลระบบจะตัดสิน
+
+[05.2] resolveDispute - ผู้ดูแลระบบตัดสินข้อพิพาท (Resolve Dispute)
+    Evidence: 05b_resolve_dispute.png
+    Detail: ผู้ดูแลระบบ (0x1444...D225) พิจารณาตัดสินคืนเงิน 0.15 ETH กลับไปยังผู้ว่าจ้าง (State: Refunded)
+
+[06] Transaction Tracking - ติดตามสถานะธุรกรรม (Transaction Tracking)
+    Evidence: 06_transaction_tracking.png
+    Detail: หน้าประวัติธุรกรรมแสดง Event ครบทุกขั้นตอน (JobCreated, PaymentDeposited, WorkSubmitted, PaymentReleased, DisputeRaised, DisputeResolved)

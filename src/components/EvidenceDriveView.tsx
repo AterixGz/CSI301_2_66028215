@@ -1,8 +1,10 @@
 import { User } from 'firebase/auth';
 import {
+  Archive,
   CheckCircle2,
   Download,
   ExternalLink,
+  FileText,
   FolderPlus,
   Image as ImageIcon,
   Loader2,
@@ -23,6 +25,7 @@ import {
   signOutGoogleDrive,
   uploadBlobToDriveFolder,
 } from '../lib/googleDriveService';
+import { buildZipArchive } from '../lib/zipBuilder';
 
 interface UploadStatus {
   status: 'idle' | 'uploading' | 'done' | 'error';
@@ -42,6 +45,7 @@ export function EvidenceDriveView() {
   const [createdFolder, setCreatedFolder] = useState<DriveUploadedFile | null>(null);
   const [uploadStatuses, setUploadStatuses] = useState<Record<string, UploadStatus>>({});
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [isZipping, setIsZipping] = useState(false);
   const [previewItem, setPreviewItem] = useState<EvidenceItem | null>(null);
 
   useEffect(() => {
@@ -160,16 +164,100 @@ export function EvidenceDriveView() {
     }
   };
 
+  const handleDownloadAllZip = async () => {
+    setUploadError(null);
+    setIsZipping(true);
+    try {
+      const entries = await Promise.all(
+        TEST_EVIDENCE_ITEMS.map(async (item) => {
+          const res = await fetch(item.imageUrl);
+          if (!res.ok) throw new Error(`โหลดภาพ ${item.fileName} ไม่สำเร็จ`);
+          const buf = await res.arrayBuffer();
+          return {
+            name: `DigitalWork_Escrow_Test_Evidence/${item.fileName}`,
+            data: new Uint8Array(buf),
+          };
+        })
+      );
+
+      entries.push({
+        name: 'DigitalWork_Escrow_Test_Evidence/Test_Report_Summary.txt',
+        data: new TextEncoder().encode(buildTestReportText()),
+      });
+
+      const zipBytes = buildZipArchive(entries);
+      const blob = new Blob([zipBytes.buffer as ArrayBuffer], { type: 'application/zip' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = 'DigitalWork_Escrow_Test_Evidence.zip';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : 'ไม่สามารถสร้างไฟล์ ZIP ได้');
+    } finally {
+      setIsZipping(false);
+    }
+  };
+
   const completedCount = Object.values(uploadStatuses).filter((s) => s.status === 'done').length;
 
   return (
     <div className="space-y-6">
+      {/* Manual Download & GitHub Evidence Banner */}
+      <section className="rounded-xl border border-slate-200 bg-white p-6 space-y-4">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <h2 className="font-display text-base font-semibold text-slate-900">
+              ดาวน์โหลดหลักฐานการทดสอบแบบ Manual (เก็บในโปรเจกต์พร้อมขึ้น GitHub แล้ว)
+            </h2>
+            <p className="mt-1 text-xs text-slate-500">
+              บันทึกภาพหลักฐานทั้ง 7 ฟังก์ชันและรายงานสรุปไว้ในโฟลเดอร์{' '}
+              <span className="font-mono text-slate-700">public/evidence/</span>{' '}
+              ของโค้ดชุดนี้เรียบร้อย สามารถ Push ขึ้น GitHub หรือดาวน์โหลดรวมเป็นไฟล์ ZIP ได้ทันที
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+            <a
+              href={`${import.meta.env.BASE_URL}evidence/Test_Report_Summary.txt`}
+              download="Test_Report_Summary.txt"
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors whitespace-nowrap"
+            >
+              <FileText className="h-4 w-4 text-slate-500" aria-hidden="true" />
+              <span>รายงานสรุป (.txt)</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={handleDownloadAllZip}
+              disabled={isZipping}
+              className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-60 transition-colors whitespace-nowrap"
+            >
+              {isZipping ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                  <span>กำลังบีบอัด ZIP...</span>
+                </>
+              ) : (
+                <>
+                  <Archive className="h-4 w-4" aria-hidden="true" />
+                  <span>ดาวน์โหลดทั้งหมด (.zip)</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Google Drive Upload Control Panel */}
       <section className="rounded-xl border border-slate-200 bg-white p-6 space-y-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h2 className="font-display text-base font-semibold text-slate-900">
-              รวมภาพหลักฐานการทดสอบทุกฟังก์ชัน (7 ภาพ) และอัปโหลดขึ้น Google Drive
+              หรืออัปโหลดรวมทั้งหมด (8 ไฟล์) ขึ้น Google Drive
             </h2>
             <p className="mt-1 text-xs text-slate-500">
               ทดสอบครบทั้ง 6 ฟังก์ชันด้วย Client <span className="font-mono">0x3291...d15C</span>, Freelancer{' '}

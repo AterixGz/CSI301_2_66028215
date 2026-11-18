@@ -74,6 +74,8 @@ export interface EvidenceItem {
   imageUrl: string;
 }
 
+const EVIDENCE_BASE = typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL ? import.meta.env.BASE_URL : './';
+
 export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
   {
     id: 'fn-1',
@@ -84,7 +86,7 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
       'ผู้ว่าจ้าง (0x3291...d15C) ระบุชื่อโครงการ รายละเอียด ค่าจ้าง 0.25 ETH กำหนดส่ง และ Address ของฟรีแลนซ์ (0xE052...0120)',
     actorTested: 'Client: 0x329160975fb8Ea2aeAfFBdFB605C780e00aDd15C',
     fileName: '01_create_contract.png',
-    imageUrl: '/evidence/01_create_contract.png',
+    imageUrl: `${EVIDENCE_BASE}evidence/01_create_contract.png`,
   },
   {
     id: 'fn-2',
@@ -95,7 +97,7 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
       'ผู้ว่าจ้างโอน ETH จำนวน 0.25 ETH ตรงตามข้อตกลงเข้าสู่ Smart Contract Escrow เพื่อใช้เป็นหลักประกัน',
     actorTested: 'Client: 0x329160975fb8Ea2aeAfFBdFB605C780e00aDd15C',
     fileName: '02_deposit_payment.png',
-    imageUrl: '/evidence/02_deposit_payment.png',
+    imageUrl: `${EVIDENCE_BASE}evidence/02_deposit_payment.png`,
   },
   {
     id: 'fn-3',
@@ -106,7 +108,7 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
       'ฟรีแลนซ์ (0xE052...0120) ส่งหลักฐาน URL ผลงานเข้าสู่สัญญา สถานะอัปเดตเป็น Submitted',
     actorTested: 'Freelancer: 0xE0529cB8578Fefa460Bb55e1EB91813B1F2b0120',
     fileName: '03_submit_work.png',
-    imageUrl: '/evidence/03_submit_work.png',
+    imageUrl: `${EVIDENCE_BASE}evidence/03_submit_work.png`,
   },
   {
     id: 'fn-4',
@@ -117,7 +119,7 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
       'ผู้ว่าจ้างตรวจรับงานและอนุมัติ ระบบโอน 0.25 ETH ให้ฟรีแลนซ์อัตโนมัติพร้อมล็อกสถานะป้องกันการจ่ายเงินซ้ำ',
     actorTested: 'Client: 0x329160975fb8Ea2aeAfFBdFB605C780e00aDd15C',
     fileName: '04_approve_and_release.png',
-    imageUrl: '/evidence/04_approve_and_release.png',
+    imageUrl: `${EVIDENCE_BASE}evidence/04_approve_and_release.png`,
   },
   {
     id: 'fn-5a',
@@ -128,7 +130,7 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
       'คู่สัญญาแจ้งข้อพิพาทบนสัญญา #2 ระบบระงับเงินไว้ใน Escrow ชั่วคราวจนกว่าผู้ดูแลระบบจะตัดสิน',
     actorTested: 'Client: 0x329160975fb8Ea2aeAfFBdFB605C780e00aDd15C',
     fileName: '05a_raise_dispute.png',
-    imageUrl: '/evidence/05a_raise_dispute.png',
+    imageUrl: `${EVIDENCE_BASE}evidence/05a_raise_dispute.png`,
   },
   {
     id: 'fn-5b',
@@ -139,7 +141,7 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
       'ผู้ดูแลระบบ (0x1444...D225) พิจารณาตัดสินคืนเงิน 0.15 ETH กลับไปยังผู้ว่าจ้าง (State: Refunded)',
     actorTested: 'Admin: 0x1444D0c117b02a728255F27d2DF68c87A796D225',
     fileName: '05b_resolve_dispute.png',
-    imageUrl: '/evidence/05b_resolve_dispute.png',
+    imageUrl: `${EVIDENCE_BASE}evidence/05b_resolve_dispute.png`,
   },
   {
     id: 'fn-6',
@@ -150,7 +152,7 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
       'หน้าประวัติธุรกรรมแสดง Event ครบทุกขั้นตอน (JobCreated, PaymentDeposited, WorkSubmitted, PaymentReleased, DisputeRaised, DisputeResolved)',
     actorTested: 'All Actors · Contract 0xA9150693a16Bd2A38eB14b57510D031b2395dAA0',
     fileName: '06_transaction_tracking.png',
-    imageUrl: '/evidence/06_transaction_tracking.png',
+    imageUrl: `${EVIDENCE_BASE}evidence/06_transaction_tracking.png`,
   },
 ];
 
