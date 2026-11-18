@@ -108,7 +108,7 @@ export function SidebarNav({
               }`}
             >
               <FolderUp className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>หลักฐาน &amp; Google Drive</span>
+              <span>หลักฐานการทดสอบ</span>
             </button>
           </nav>
         </div>

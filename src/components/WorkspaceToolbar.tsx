@@ -45,7 +45,7 @@ export function WorkspaceToolbar({
             { id: 'overview', label: 'ภาพรวมสัญญา' },
             { id: 'transactions', label: 'ประวัติธุรกรรม' },
             { id: 'contract', label: 'ข้อมูลสัญญา' },
-            { id: 'evidence', label: 'หลักฐาน & Drive' },
+            { id: 'evidence', label: 'หลักฐานทดสอบ' },
           ] as const
         ).map((tab) => (
           <button

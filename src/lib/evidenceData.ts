@@ -1,68 +1,3 @@
-import { initializeApp, getApps, getApp } from 'firebase/app';
-import {
-  GoogleAuthProvider,
-  User,
-  getAuth,
-  onAuthStateChanged,
-  signInWithPopup,
-} from 'firebase/auth';
-import firebaseConfig from '../../firebase-applet-config.json';
-
-export const SCOPES = ['https://www.googleapis.com/auth/drive.file'] as const;
-
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-const provider = new GoogleAuthProvider();
-for (const scope of SCOPES) {
-  provider.addScope(scope);
-}
-
-// In-memory access token cache (never persisted in localStorage/sessionStorage)
-let isSigningIn = false;
-let cachedAccessToken: string | null = null;
-
-export function initGoogleDriveAuth(
-  onAuthSuccess?: (user: User, token: string) => void,
-  onAuthFailure?: () => void
-) {
-  return onAuthStateChanged(auth, (user: User | null) => {
-    if (user && cachedAccessToken) {
-      onAuthSuccess?.(user, cachedAccessToken);
-    } else if (!isSigningIn) {
-      if (!user) cachedAccessToken = null;
-      onAuthFailure?.();
-    }
-  });
-}
-
-export async function signInWithGoogleDrive(): Promise<{
-  user: User;
-  accessToken: string;
-}> {
-  try {
-    isSigningIn = true;
-    const result = await signInWithPopup(auth, provider);
-    const credential = GoogleAuthProvider.credentialFromResult(result);
-    if (!credential?.accessToken) {
-      throw new Error('ไม่สามารถรับสิทธิ์เข้าถึง Google Drive ได้ กรุณาลองเข้าสู่ระบบใหม่อีกครั้ง');
-    }
-    cachedAccessToken = credential.accessToken;
-    return { user: result.user, accessToken: cachedAccessToken };
-  } finally {
-    isSigningIn = false;
-  }
-}
-
-export async function getDriveAccessToken(): Promise<string | null> {
-  return cachedAccessToken;
-}
-
-export async function signOutGoogleDrive(): Promise<void> {
-  await auth.signOut();
-  cachedAccessToken = null;
-}
-
 export interface EvidenceItem {
   id: string;
   stepNumber: string;
@@ -74,7 +9,10 @@ export interface EvidenceItem {
   imageUrl: string;
 }
 
-const EVIDENCE_BASE = typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL ? import.meta.env.BASE_URL : './';
+const EVIDENCE_BASE =
+  typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL
+    ? import.meta.env.BASE_URL
+    : './';
 
 export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
   {
@@ -155,75 +93,6 @@ export const TEST_EVIDENCE_ITEMS: EvidenceItem[] = [
     imageUrl: `${EVIDENCE_BASE}evidence/06_transaction_tracking.png`,
   },
 ];
-
-export interface DriveUploadedFile {
-  id: string;
-  name: string;
-  webViewLink: string;
-}
-
-export async function createDriveFolder(
-  accessToken: string,
-  folderName: string
-): Promise<DriveUploadedFile> {
-  const res = await fetch(
-    'https://www.googleapis.com/drive/v3/files?fields=id,name,webViewLink',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: folderName.trim() || 'DigitalWork_Escrow_Test_Evidence',
-        mimeType: 'application/vnd.google-apps.folder',
-      }),
-    }
-  );
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`ไม่สามารถสร้างโฟลเดอร์บน Google Drive ได้ (${res.status}): ${errText}`);
-  }
-  return (await res.json()) as DriveUploadedFile;
-}
-
-export async function uploadBlobToDriveFolder(
-  accessToken: string,
-  folderId: string,
-  fileName: string,
-  blob: Blob,
-  mimeType: string
-): Promise<DriveUploadedFile> {
-  const metadata = {
-    name: fileName,
-    parents: [folderId],
-  };
-
-  const form = new FormData();
-  form.append(
-    'metadata',
-    new Blob([JSON.stringify(metadata)], { type: 'application/json' })
-  );
-  form.append('file', blob, fileName);
-
-  const res = await fetch(
-    'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink',
-    {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: form,
-    }
-  );
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`อัปโหลดไฟล์ ${fileName} ไม่สำเร็จ (${res.status}): ${errText}`);
-  }
-  return (await res.json()) as DriveUploadedFile;
-}
 
 export function buildTestReportText(): string {
   const lines = [

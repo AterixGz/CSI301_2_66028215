@@ -92,7 +92,7 @@ export function TopBar({
                 : 'border-transparent text-slate-600 hover:text-slate-900'
             }`}
           >
-            หลักฐาน &amp; Drive
+            หลักฐานทดสอบ
           </button>
         </nav>
 
