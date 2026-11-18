@@ -1,0 +1,180 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+//66028215 Thanpisit Buabut สอบรอบ 2
+
+contract FreelanceEscrow {
+    address public admin;
+    uint256 public jobCount;
+
+    // สถานะของงานทั้งหมดตามลำดับการทำงาน
+    enum State {
+        Created,    // 0: สร้างข้อตกลงแล้ว (ยังไม่โอนเงิน)
+        Funded,     // 1: ผู้ว่าจ้างฝากเงินเข้า Escrow แล้ว
+        Submitted,  // 2: ฟรีแลนซ์ส่งมอบงานแล้ว
+        Disputed,   // 3: เกิดข้อพิพาท รอ Admin ตัดสิน
+        Completed,  // 4: งานเสร็จสมบูรณ์ โอนเงินให้ฟรีแลนซ์แล้ว
+        Refunded    // 5: คืนเงินให้ผู้ว่าจ้างแล้ว
+    }
+
+    struct Job {
+        uint256 id;
+        address payable client;
+        address payable freelancer;
+        string title;
+        string description;
+        uint256 amount;      // ค่าจ้าง (หน่วยเป็น Wei)
+        uint256 deadline;    // กำหนดส่ง (Unix Timestamp)
+        string workProof;    // URL หรือ Hash ของไฟล์ผลงาน
+        State state;
+    }
+
+    mapping(uint256 => Job) public jobs;
+
+    // Events สำหรับให้ Etherscan และหน้าเว็บดึงประวัติธุรกรรมไปแสดงผล
+    event JobCreated(uint256 indexed jobId, address indexed client, address indexed freelancer, string title, uint256 amount, uint256 deadline);
+    event PaymentDeposited(uint256 indexed jobId, address indexed client, uint256 amount);
+    event WorkSubmitted(uint256 indexed jobId, address indexed freelancer, string workProof);
+    event PaymentReleased(uint256 indexed jobId, address indexed freelancer, uint256 amount);
+    event DisputeRaised(uint256 indexed jobId, address indexed raisedBy);
+    event DisputeResolved(uint256 indexed jobId, address indexed resolvedBy, bool paidToFreelancer, uint256 amount);
+
+    // Modifiers ตรวจสอบสิทธิ์และสถานะ (ป้องกันการโกงและจ่ายเงินซ้ำ)
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin can perform this action");
+        _;
+    }
+
+    modifier onlyClient(uint256 _jobId) {
+        require(msg.sender == jobs[_jobId].client, "Only client can perform this action");
+        _;
+    }
+
+    modifier onlyFreelancer(uint256 _jobId) {
+        require(msg.sender == jobs[_jobId].freelancer, "Only freelancer can perform this action");
+        _;
+    }
+
+    modifier inState(uint256 _jobId, State _expectedState) {
+        require(jobs[_jobId].state == _expectedState, "Invalid job state for this action");
+        _;
+    }
+
+    // คนที่กด Deploy สัญญาจะได้รับสิทธิ์เป็น Admin อัตโนมัติ
+    constructor() {
+        admin = msg.sender;
+    }
+
+    // 1. สร้างข้อตกลงการจ้างงาน (Create Contract)
+    function createContract(
+        string memory _title,
+        string memory _description,
+        uint256 _amountInWei,
+        uint256 _deadlineTimestamp,
+        address payable _freelancer
+    ) external returns (uint256) {
+        require(_freelancer != address(0), "Invalid freelancer address");
+        require(_freelancer != msg.sender, "Client and freelancer cannot be the same");
+        require(_amountInWei > 0, "Amount must be greater than 0");
+        require(_deadlineTimestamp > block.timestamp, "Deadline must be in the future");
+
+        jobCount++;
+        jobs[jobCount] = Job({
+            id: jobCount,
+            client: payable(msg.sender),
+            freelancer: _freelancer,
+            title: _title,
+            description: _description,
+            amount: _amountInWei,
+            deadline: _deadlineTimestamp,
+            workProof: "",
+            state: State.Created
+        });
+
+        emit JobCreated(jobCount, msg.sender, _freelancer, _title, _amountInWei, _deadlineTimestamp);
+        return jobCount;
+    }
+
+    // 2. ฝากเงินค่าจ้างเข้า Smart Contract (Deposit Payment)
+    function depositPayment(uint256 _jobId)
+        external
+        payable
+        onlyClient(_jobId)
+        inState(_jobId, State.Created)
+    {
+        Job storage job = jobs[_jobId];
+        require(msg.value == job.amount, "Deposit amount must match the agreed wage");
+
+        job.state = State.Funded;
+        emit PaymentDeposited(_jobId, msg.sender, msg.value);
+    }
+
+    // 3. บันทึกการส่งมอบงาน (Submit Work)
+    function submitWork(uint256 _jobId, string memory _workProof)
+        external
+        onlyFreelancer(_jobId)
+        inState(_jobId, State.Funded)
+    {
+        require(bytes(_workProof).length > 0, "Work proof cannot be empty");
+
+        Job storage job = jobs[_jobId];
+        job.workProof = _workProof;
+        job.state = State.Submitted;
+
+        emit WorkSubmitted(_jobId, msg.sender, _workProof);
+    }
+
+    // 4. อนุมัติและจ่ายเงินอัตโนมัติ (Approve & Release Payment)
+    function approveAndRelease(uint256 _jobId)
+        external
+        onlyClient(_jobId)
+        inState(_jobId, State.Submitted)
+    {
+        Job storage job = jobs[_jobId];
+
+        // เปลี่ยนสถานะก่อนโอนเงินเสมอ เพื่อป้องกันการกดเบิกซ้ำ (Reentrancy / Double Payment)
+        job.state = State.Completed;
+
+        (bool success, ) = job.freelancer.call{value: job.amount}("");
+        require(success, "ETH transfer to freelancer failed");
+
+        emit PaymentReleased(_jobId, job.freelancer, job.amount);
+    }
+
+    // 5.1 แจ้งข้อพิพาท (Dispute Management - Raise)
+    function raiseDispute(uint256 _jobId) external {
+        Job storage job = jobs[_jobId];
+        require(msg.sender == job.client || msg.sender == job.freelancer, "Only client or freelancer can raise dispute");
+        require(job.state == State.Funded || job.state == State.Submitted, "Cannot dispute at current state");
+
+        job.state = State.Disputed;
+        emit DisputeRaised(_jobId, msg.sender);
+    }
+
+    // 5.2 ผู้ดูแลระบบตัดสินข้อพิพาท (Dispute Management - Resolve)
+    // _releaseToFreelancer = true (โอนให้ฟรีแลนซ์) | false (คืนเงินให้ผู้ว่าจ้าง)
+    function resolveDispute(uint256 _jobId, bool _releaseToFreelancer)
+        external
+        onlyAdmin
+        inState(_jobId, State.Disputed)
+    {
+        Job storage job = jobs[_jobId];
+
+        if (_releaseToFreelancer) {
+            job.state = State.Completed;
+            (bool success, ) = job.freelancer.call{value: job.amount}("");
+            require(success, "ETH transfer to freelancer failed");
+        } else {
+            job.state = State.Refunded;
+            (bool success, ) = job.client.call{value: job.amount}("");
+            require(success, "ETH refund to client failed");
+        }
+
+        emit DisputeResolved(_jobId, msg.sender, _releaseToFreelancer, job.amount);
+    }
+
+    // 6. ดึงข้อมูลรายละเอียดงานทั้งหมดสำหรับหน้าเว็บ (Transaction Tracking)
+    function getJob(uint256 _jobId) external view returns (Job memory) {
+        require(_jobId > 0 && _jobId <= jobCount, "Job does not exist");
+        return jobs[_jobId];
+    }
+}

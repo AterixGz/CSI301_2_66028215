@@ -1,0 +1,6 @@
+{
+  "name": "DigitalWork Escrow — Freelance Smart Payment Platform",
+  "description": "แพลตฟอร์มจ้างงานฟรีแลนซ์และระบบ Escrow ชำระเงินตามผลงานอัตโนมัติบน Ethereum Sepolia (0xA9150693a16Bd2A38eB14b57510D031b2395dAA0) โดยบริษัท DigitalWork Solutions",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
